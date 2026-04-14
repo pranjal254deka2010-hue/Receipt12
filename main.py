@@ -8,38 +8,52 @@ import os
 st.set_page_config(page_title="OPI Receipt Portal")
 
 # Header on the Webpage
-st.header("OXFORD PARAMEDICAL INSTITUTE")
-st.write("Dhupdhara, Goalpara, Assam")
+st.markdown("<h2 style='text-align: center; color: #002e63;'>OXFORD PARAMEDICAL INSTITUTE</h2>", unsafe_allow_html=True)
+st.markdown("<p style='text-align: center; font-weight: bold;'>Dhupdhara, Goalpara, Assam</p>", unsafe_allow_html=True)
 
 st.divider()
 
 # --- FORM ---
 with st.form("receipt_form"):
     name = st.text_input("Student Name")
-    course = st.selectbox("Course", ["DMLT", "ICU Technology", "ECG Tech", "First Aid"])
-    purpose = st.selectbox("Purpose", ["Monthly Fee", "Admission Fee", "Registration Fee", "Other"])
-    months = st.text_input("Months (e.g. Jan-Feb)", "N/A")
-    amount = st.number_input("Total Amount (₹)", min_value=0.0)
-    mode = st.selectbox("Mode", ["Cash", "Online", "UPI"])
     
-    submit = st.form_submit_button("Generate PDF")
+    # Updated Course List
+    course = st.selectbox("Course", [
+        "DMLT", 
+        "ICU TECHNICIAN", 
+        "FIRST AID AND PATIENT CARE"
+    ])
+    
+    # Updated Fee Purpose
+    purpose = st.selectbox("Purpose of Payment", [
+        "Monthly Fee", 
+        "Admission Fee", 
+        "Examination Fee", 
+        "Registration Fee", 
+        "Other"
+    ])
+    
+    months = st.text_input("For Months (e.g. Jan-Feb)", "N/A")
+    amount = st.number_input("Total Amount Paid (₹)", min_value=0.0)
+    mode = st.selectbox("Payment Mode", ["Cash", "Online", "UPI", "Cheque"])
+    
+    submit = st.form_submit_button("Generate Official PDF")
 
 if submit and name:
-    # 1. Prepare Data
     today = datetime.now().strftime("%d-%m-%Y")
     
-    # 2. Build PDF
+    # --- PDF GENERATION ---
     pdf = FPDF()
     pdf.add_page()
     
-    # SIMPLE BORDER
+    # Simple Border
     pdf.rect(5, 5, 200, 287)
     
-    # LOGO (Top Left)
+    # Logo (Top Left) - Matches the file name you uploaded
     if os.path.exists("logo.png"):
         pdf.image("logo.png", 12, 12, 35)
     
-    # HEADER TEXT
+    # Header Text
     pdf.set_font("Arial", 'B', 16)
     pdf.set_xy(50, 15)
     pdf.cell(0, 10, "OXFORD PARAMEDICAL INSTITUTE", ln=True, align='L')
@@ -52,7 +66,7 @@ if submit and name:
     pdf.set_font("Arial", 'B', 14)
     pdf.cell(0, 10, "OFFICIAL FEES RECEIPT", ln=True, align='C')
     
-    # RECEIPT CONTENT
+    # Receipt Content
     pdf.ln(15)
     pdf.set_font("Arial", '', 12)
     pdf.cell(0, 10, f"Date: {today}", ln=True, align='R')
@@ -63,9 +77,9 @@ if submit and name:
     
     pdf.ln(10)
     pdf.set_font("Arial", 'B', 14)
-    pdf.cell(0, 15, f"TOTAL PAID: Rs. {amount}", border=1, ln=True, align='C')
+    pdf.cell(0, 15, f"TOTAL PAID: Rs. {amount:,.2f}", border=1, ln=True, align='C')
     
-    # SIGNATURE (Bottom Right)
+    # Signature (Bottom Right)
     if os.path.exists("signature.png"):
         pdf.image("signature.png", 150, 160, 40)
         
@@ -75,7 +89,7 @@ if submit and name:
     pdf.set_xy(140, 190)
     pdf.cell(50, 10, "Authorized Signatory", align='C')
 
-    # DOWNLOAD
+    # Create Download
     pdf_output = pdf.output(dest='S').encode('latin-1')
-    st.success("Receipt Generated!")
-    st.download_button("Download PDF", pdf_output, f"Receipt_{name}.pdf")
+    st.success(f"Receipt for {name} generated successfully!")
+    st.download_button("📥 Download PDF Receipt", pdf_output, f"OPI_Receipt_{name}.pdf")
