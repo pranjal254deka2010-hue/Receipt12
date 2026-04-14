@@ -4,122 +4,89 @@ from datetime import datetime
 import pandas as pd
 import os
 
-# --- PAGE CONFIG ---
-st.set_page_config(page_title="OPI Management Portal", layout="centered")
+# --- BASIC CONFIG ---
+st.set_page_config(page_title="OPI Portal")
 
-# --- DATABASE SETUP ---
-STUDENT_FILE = "students.csv"
+# --- DATA STORAGE ---
 PAYMENT_FILE = "payments.csv"
+if not os.path.exists(PAYMENT_FILE):
+    pd.DataFrame(columns=["Date", "Name", "Purpose", "Amount"]).to_csv(PAYMENT_FILE, index=False)
 
-for f in [STUDENT_FILE, PAYMENT_FILE]:
-    if not os.path.exists(f):
-        pd.DataFrame().to_csv(f, index=False)
-
-# --- ADDRESS & HEADER ---
-CAMPUS_ADDRESS = "Dhupdhara, Goalpara, Assam - 783123"
-
-col1, col2 = st.columns([1, 3])
-with col1:
-    if os.path.exists("logo.png"):
-        st.image("logo.png", width=140)
-with col2:
-    st.title("OXFORD PARAMEDICAL INSTITUTE")
-    st.write(f"**{CAMPUS_ADDRESS}**")
-    st.write("*ESTD. 2009 | Excellence in Healthcare Education*")
+# --- HEADER ---
+st.title("OXFORD PARAMEDICAL INSTITUTE")
+st.write("**Dhupdhara, Goalpara, Assam**")
+st.write("ESTD. 2009")
 
 st.divider()
 
-menu = st.sidebar.selectbox("MENU", ["Generate Receipt", "Payment History", "Student Records"])
+# --- MENU ---
+menu = st.sidebar.selectbox("Menu", ["Create Receipt", "View History"])
 
-# --- 1. GENERATE RECEIPT ---
-if menu == "Generate Receipt":
-    st.subheader("📝 Create Fees Receipt")
-    with st.form("receipt_form"):
+if menu == "Create Receipt":
+    st.subheader("📝 New Receipt")
+    with st.form("f1"):
         name = st.text_input("Student Name")
-        course = st.selectbox("Course", ["DMLT", "ICU Technology", "ECG Technician", "First Aid"])
-        purpose = st.selectbox("Purpose", ["Monthly Fee", "Admission Fee", "Examination Fee", "Registration Fee", "Other"])
+        course = st.selectbox("Course", ["DMLT", "ICU Tech", "ECG Tech", "First Aid"])
+        purpose = st.selectbox("Purpose", ["Monthly Fee", "Admission Fee", "Registration Fee", "Other"])
         
-        # Multiple months logic
-        num_m = 1
-        m_range = "N/A"
-        if purpose == "Monthly Fee":
-            num_m = st.number_input("Number of Months", min_value=1, value=1)
-            m_range = st.text_input("For Months (e.g. Jan to March)")
-
-        mode = st.selectbox("Payment Mode", ["Cash", "Online", "UPI", "Cheque"])
-        amt = st.number_input("Amount per Month (₹)", min_value=0.0)
-        total = amt * num_m
+        # Monthly Logic
+        months = st.text_input("For Months (e.g., April-May)", value="N/A")
+        amt = st.number_input("Total Amount (₹)", min_value=0.0)
+        mode = st.selectbox("Mode", ["Cash", "Online", "UPI"])
         
-        st.write(f"**Total to Pay: ₹{total}**")
         submit = st.form_submit_button("Generate PDF")
 
     if submit and name:
-        date_str = datetime.now().strftime("%d-%m-%Y")
-        receipt_id = f"OPI-{datetime.now().strftime('%H%M%S')}"
-        
         # Save record
-        new_data = pd.DataFrame([[date_str, receipt_id, name, purpose, m_range, total, mode]], 
-                               columns=["Date", "ID", "Name", "Purpose", "Months", "Amount", "Mode"])
-        new_data.to_csv(PAYMENT_FILE, mode='a', header=not os.path.exists(PAYMENT_FILE), index=False)
+        date_now = datetime.now().strftime("%d-%m-%Y")
+        new_rec = pd.DataFrame([[date_now, name, purpose, amt]], columns=["Date", "Name", "Purpose", "Amount"])
+        new_rec.to_csv(PAYMENT_FILE, mode='a', header=False, index=False)
 
-        # PDF GENERATION (Simple & Stable)
+        # PDF - SIMPLE & STABLE
         pdf = FPDF()
         pdf.add_page()
-        pdf.set_font("Arial", 'B', 16)
         
-        # Header
+        # Add Logo if it exists
         if os.path.exists("logo.png"):
-            pdf.image("logo.png", 10, 10, 30)
-        
+            pdf.image("logo.png", 10, 8, 33)
+            
+        pdf.set_font("Arial", 'B', 16)
         pdf.cell(0, 10, "OXFORD PARAMEDICAL INSTITUTE", ln=True, align='C')
         pdf.set_font("Arial", '', 10)
-        pdf.cell(0, 5, CAMPUS_ADDRESS, ln=True, align='C')
+        pdf.cell(0, 5, "Dhupdhara, Goalpara, Assam", ln=True, align='C')
         pdf.ln(20)
         
-        # Receipt Content
-        pdf.set_font("Arial", 'B', 12)
-        pdf.cell(0, 10, "OFFICIAL FEES RECEIPT", ln=True, align='C')
+        pdf.set_font("Arial", 'B', 14)
+        pdf.cell(0, 10, "FEES RECEIPT", ln=True, align='C')
         pdf.ln(10)
         
         pdf.set_font("Arial", '', 12)
-        pdf.cell(100, 10, f"Receipt: {receipt_id}")
-        pdf.cell(0, 10, f"Date: {date_str}", ln=True, align='R')
-        pdf.ln(5)
-        
+        pdf.cell(0, 10, f"Date: {date_now}", ln=True, align='R')
         pdf.cell(0, 10, f"Student: {name.upper()}", border='B', ln=True)
         pdf.cell(0, 10, f"Course: {course}", border='B', ln=True)
-        pdf.cell(0, 10, f"Purpose: {purpose} ({m_range})", border='B', ln=True)
-        pdf.cell(0, 10, f"Mode: {mode}", border='B', ln=True)
+        pdf.cell(0, 10, f"Purpose: {purpose} ({months})", border='B', ln=True)
+        pdf.cell(0, 10, f"Payment Mode: {mode}", border='B', ln=True)
+        
         pdf.ln(10)
-        
         pdf.set_font("Arial", 'B', 14)
-        pdf.cell(0, 15, f"TOTAL PAID: Rs. {total}", border=1, ln=True, align='C')
+        pdf.cell(0, 15, f"TOTAL PAID: Rs. {amt}", border=1, ln=True, align='C')
         
-        # Signature
+        # Add Signature if it exists
         if os.path.exists("signature.png"):
-            pdf.image("signature.png", 150, 150, 40)
+            pdf.image("signature.png", 150, 140, 40)
         
         pdf.ln(30)
-        pdf.set_font("Arial", 'B', 10)
         pdf.cell(0, 10, "__________________________", ln=True, align='R')
         pdf.cell(0, 5, "Authorized Signatory      ", ln=True, align='R')
 
-        pdf_bytes = pdf.output()
+        # Output
+        pdf_out = pdf.output(dest='S').encode('latin-1')
         st.success("Receipt Created!")
-        st.download_button("Download PDF", pdf_bytes, f"{name}_receipt.pdf")
+        st.download_button("Download PDF", pdf_out, f"{name}_receipt.pdf")
 
-# --- OTHER SECTIONS ---
-elif menu == "Payment History":
-    st.subheader("Collection Records")
+elif menu == "View History":
+    st.subheader("💰 Collection Records")
     if os.path.exists(PAYMENT_FILE):
-        st.dataframe(pd.read_csv(PAYMENT_FILE))
+        df = pd.read_csv(PAYMENT_FILE)
+        st.dataframe(df)
 
-elif menu == "Student Records":
-    st.subheader("Student List")
-    with st.expander("Add Student"):
-        n = st.text_input("Full Name")
-        if st.button("Save"):
-            pd.DataFrame([[n]], columns=["Name"]).to_csv(STUDENT_FILE, mode='a', header=False, index=False)
-            st.rerun()
-    if os.path.exists(STUDENT_FILE):
-        st.dataframe(pd.read_csv(STUDENT_FILE))
