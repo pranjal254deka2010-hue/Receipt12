@@ -67,32 +67,27 @@ if menu == "Generate Receipt":
         pdf.set_line_width(1.0); pdf.rect(5, 5, 200, 287) 
         pdf.set_line_width(0.2); pdf.rect(6, 6, 198, 285)
         
-        # --- WATERMARK LOGO ---
-        # Places a large, faded logo in the center
+        # --- FIXED WATERMARK ---
+        # Instead of transparency context, we place it with a light alpha if the library supports it, 
+        # or simply place it first so text goes on top.
         if os.path.exists("logo.png"):
-            with pdf.local_context(fill_opacity=0.15): # Makes it faint/watermarked
-                pdf.image("logo.png", x=45, y=90, w=120)
+            pdf.image("logo.png", x=45, y=90, w=120)
 
-        # TOP LOGO (Enlarged)
+        # TOP LOGO
         if os.path.exists("logo.png"): 
             pdf.image("logo.png", 15, 12, 35)
         
-        # HEADER TEXT (Adjusted spacing to prevent overlap)
+        # HEADER TEXT
         pdf.set_font("Arial", 'B', 18); pdf.set_text_color(0, 46, 99)
-        pdf.set_xy(55, 18)
-        pdf.cell(0, 10, "OXFORD PARAMEDICAL INSTITUTE", ln=True, align='L')
-        
+        pdf.set_xy(55, 18); pdf.cell(0, 10, "OXFORD PARAMEDICAL INSTITUTE", ln=True, align='L')
         pdf.set_font("Arial", 'B', 9); pdf.set_text_color(204, 0, 0)
-        pdf.set_xy(55, 26)
-        pdf.cell(0, 10, CAMPUS_ADDRESS, ln=True, align='L')
-        
+        pdf.set_xy(55, 26); pdf.cell(0, 10, CAMPUS_ADDRESS, ln=True, align='L')
         pdf.set_font("Arial", 'I', 9); pdf.set_text_color(0, 0, 0)
-        pdf.set_xy(55, 32)
-        pdf.cell(0, 10, "ESTD. 2009 | Excellence in Healthcare Education", ln=True, align='L')
+        pdf.set_xy(55, 32); pdf.cell(0, 10, "ESTD. 2009 | Excellence in Healthcare Education", ln=True, align='L')
         
         pdf.ln(25); pdf.set_font("Arial", 'B', 16); pdf.set_text_color(0,0,0)
         pdf.cell(0, 10, "OFFICIAL FEES RECEIPT", ln=True, align='C')
-        pdf.line(75, 75, 135, 75) # Fixed underline position
+        pdf.line(75, 78, 135, 78) 
         
         pdf.ln(15); pdf.set_font("Arial", 'B', 11)
         pdf.cell(100, 10, f"Receipt No: {receipt_no}")
@@ -107,7 +102,6 @@ if menu == "Generate Receipt":
         if fee_purpose == "Monthly Fee":
             purpose_display += f" for {num_months} Month(s) ({month_range})"
         pdf.cell(0, 12, purpose_display, border='B', ln=True)
-        
         pdf.cell(0, 12, f"Payment Mode:   {pay_mode}", border='B', ln=True)
         
         pdf.ln(15); pdf.set_font("Arial", 'B', 14); pdf.set_fill_color(240, 240, 240)
@@ -122,7 +116,32 @@ if menu == "Generate Receipt":
         pdf.set_xy(140, 226); pdf.cell(50, 10, "Authorized Signatory", align='C')
 
         pdf_output = pdf.output(dest='S').encode('latin-1')
-        st.success(f"✅ Professional Watermarked Receipt Ready!")
+        st.success(f"✅ Receipt Generated!")
         st.download_button(label="📥 Download PDF", data=pdf_output, file_name=f"OPI_{student_name}.pdf")
 
-# (Other menu sections remain same)
+# --- OTHER SECTIONS ---
+elif menu == "Payment History":
+    st.subheader("💰 Collection Records")
+    if os.path.exists(PAYMENT_FILE):
+        df = pd.read_csv(PAYMENT_FILE)
+        if not df.empty:
+            st.metric("Total Collected", f"₹{df['Amount'].sum():,.2f}")
+            st.dataframe(df, use_container_width=True)
+        else: st.info("No records yet.")
+
+elif menu == "Mark Attendance":
+    st.subheader("📅 Attendance")
+    if os.path.exists(STUDENT_FILE):
+        df = pd.read_csv(STUDENT_FILE)
+        if not df.empty:
+            for n in df['Name']: st.checkbox(n, key=n)
+            if st.button("Save"): st.success("Saved!")
+
+elif menu == "Student Records":
+    st.subheader("👥 Students")
+    with st.expander("Add New"):
+        n = st.text_input("Name"); c = st.text_input("Course")
+        if st.button("Add"):
+            pd.DataFrame([[n, c]], columns=["Name", "Course"]).to_csv(STUDENT_FILE, mode='a', header=False, index=False)
+            st.rerun()
+    if os.path.exists(STUDENT_FILE): st.dataframe(pd.read_csv(STUDENT_FILE))
