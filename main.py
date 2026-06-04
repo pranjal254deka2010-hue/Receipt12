@@ -1,7 +1,6 @@
 import streamlit as st
 from fpdf import FPDF
 from datetime import datetime
-import pandas as pd
 import os
 
 # --- APP SETUP ---
@@ -29,10 +28,6 @@ with st.form("receipt_form"):
         "FIRST AID AND PATIENT CARE"
     ])
     
-    # Dynamic Academic Timeline Mapping
-    # Sets the default session timeline for the first-year student lifecycle
-    session_year = st.selectbox("Academic Session", ["May 2026 - May 2028", "Current Active Batch"])
-    
     # Updated Fee Purpose
     purpose = st.selectbox("Purpose of Payment", [
         "Monthly Fee", 
@@ -58,9 +53,9 @@ if submit and name:
     # Simple Border
     pdf.rect(5, 5, 200, 287)
     
-    # Logo (Top Left) - Matches the file name you uploaded
-    if os.path.exists("logo.png"):
-        pdf.image("logo.png", 12, 12, 35)
+    # Logo (Top Left) - Points to the updated file name
+    if os.path.exists("osdc_logo.png"):
+        pdf.image("osdc_logo.png", 12, 12, 35)
     
     # Header Text
     pdf.set_font("Arial", 'B', 16)
@@ -86,7 +81,6 @@ if submit and name:
     
     pdf.cell(0, 12, f"Student Name: {name.upper()}", border='B', ln=True)
     pdf.cell(0, 12, f"Course: {course}", border='B', ln=True)
-    pdf.cell(0, 12, f"Academic Session: {session_year}", border='B', ln=True)
     pdf.cell(0, 12, f"Purpose: {purpose} ({months})", border='B', ln=True)
     pdf.cell(0, 12, f"Payment Mode: {mode}", border='B', ln=True)
     
